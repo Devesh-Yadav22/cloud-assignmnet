@@ -62,7 +62,8 @@ def call_teacher(prompt_template, command):
     )
     with urllib.request.urlopen(req, timeout=300) as resp:
         body = json.loads(resp.read().decode("utf-8"))
-    return body.get("response", "").strip()
+    # Keep the teacher response byte-for-byte as returned by Ollama for auditability.
+    return body.get("response", "")
 
 
 def read_command_pool():
