@@ -146,12 +146,12 @@ on \code{/parse}, HPA 1--2 @ 70\% CPU, \code{RollingUpdate maxUnavailable=0, max
 \textbf{Results.}
 \begin{itemize}
 \item \textbf{Rolling update} v1$\rightarrow$v2 under load: 2 of 39 requests non-200 (5.13\%).
-This exceeds the 0.5\% limit; the saved output does not identify the cause. \code{X-Model-Version}
-showed v2 during and v1 after \code{rollout undo}.
+This exceeds the 0.5\% limit; the saved output does not identify the cause or include version-header
+traces for the rollback criterion.
 \item \textbf{Recovery:} deleted a Pod under the live Deployment; replicas returned to \textbf{2} within
 $\sim$10\,s; recovery-window request failures were not saved.
 \item \textbf{Cold start} (3 runs): \textbf{8\,s, 8\,s, 8\,s} $\rightarrow$ median \textbf{8\,s}; logs show
-startup $\rightarrow$ \code{model loaded} $\rightarrow$ \code{/readyz} 200.
+startup $\rightarrow$ \code{model loaded} $\rightarrow$ \code{/readyz} 200, but not the S3 download.
 \item \textbf{Load balancing} (2 Ready): \textbf{109 / 104} requests $\rightarrow$ 51\% / 49\% across replicas.
 \item \textbf{HPA:} under load CPU reached \textbf{196\%} of request (target 70\%); the HPA computed a
 scale-up but was capped at \code{maxReplicas=2} (\code{ScalingLimited: TooManyReplicas}). The saved

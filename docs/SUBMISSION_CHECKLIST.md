@@ -10,7 +10,7 @@ This list separates source files and saved output from checks that still need a 
 | Task 1: k3d, SeaweedFS, parallel labeling, clean data | Manifests, worker, counts JSON | Teacher shards and cleaned dataset must be restored or regenerated; checksum must be checked. |
 | Task 2: v1/v2 models, Release, evaluation | Training code and saved scores; v1 predictions pass 95% gate | No model files or GitHub Release asset yet. |
 | Task 3: service and container | API code, tests, saved image-size and endpoint output | Separate 50-request constrained run is not in the saved evidence. |
-| Task 4: deployment and reliability | Manifests and cluster logs | Rollout 2/39 non-200 (5.13%) exceeds 0.5%; HPA 1→2→1 cycle and recovery-window failure rate are missing. |
+| Task 4: deployment and reliability | Manifests and cluster logs | Rollout 2/39 non-200 (5.13%) exceeds 0.5%; HPA 1→2→1, rollback version headers, S3 download logs, and recovery-window failure rate are missing. |
 | Task 5: subnet and NACL | Subnet plan and 6/6 sample packet check | Locally verified. |
 | Task 6: CI and quality gate | Workflow, 22 passing local tests, 99% saved-prediction validity; [base-model run failed at the gate](https://github.com/Devesh-Yadav22/cloud-assignmnet/actions/runs/42484822377) | Release-based trained-model CI run pending. |
 | Task 7: load and cost | 90-second cluster run and cost output | Assignment specifies a 2-minute standard Locust run. |

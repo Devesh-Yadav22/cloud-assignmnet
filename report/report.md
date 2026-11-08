@@ -115,12 +115,12 @@ The saved `results/cluster_*` files record a k3d run with two service replicas a
 - Rolling update v1→v2 under load: **2 of 39** requests non-200 during the window (**5.13%**).
   This exceeds the assignment's **0.5%** limit; the saved output does not identify whether the
   failures came from model validation or availability, so the rollout criterion remains unverified.
-  `X-Model-Version` = **v2** during the rollout and **v1** after `rollout undo`
-  (`results/cluster_rolling_update.txt`).
+  The saved `results/cluster_rolling_update.txt` contains the request count but no version-header
+  trace, so the rollback-to-v1 header criterion still needs evidence.
 - Recovery: deleted a Pod under the live Deployment; replicas returned to **2** within ~10 s
   (`results/cluster_recovery.txt`). The recovery-window request failure rate was not saved.
 - Cold start (3 runs): **8 s, 8 s, 8 s** → median **8 s**; logs show startup → `model loaded` → `/readyz`
-  200 (`results/cluster_coldstart_logs.txt`).
+  200 (`results/cluster_coldstart_logs.txt`). The saved logs do not explicitly show the S3 download.
 - Load balancing (2 Ready): **109 / 104** requests → **51 % / 49 %** across replicas
   (`results/cluster_loadtest_headers.json`).
 - HPA: under load CPU reached **196 %** of request (target 70 %); the HPA computed a scale-up but was
