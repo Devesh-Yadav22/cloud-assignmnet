@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tmp/
+models/
+datasets/
+*.log
+report/*.aux
+report/*.out
+report/*.toc
+report/*.synctex.gz
