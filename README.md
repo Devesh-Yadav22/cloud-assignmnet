@@ -34,7 +34,7 @@ The response has exactly four fields:
 | Locust | Optional load test |
 | GitHub CLI (`gh`) | Model Release download during fresh deployment |
 
-On Windows, run the shell scripts through Git Bash. Install Python dependencies from the relevant `requirements.txt` files. The training script also needs a CPU or GPU installation of PyTorch.
+On Windows, run the shell scripts through Git Bash. Install Python dependencies from the relevant `requirements.txt` files. For lint and unit tests, use `pip install -r tests/requirements.txt`. The training script needs the CPU build of PyTorch described in `training/requirements.txt`.
 
 ## Project structure
 
