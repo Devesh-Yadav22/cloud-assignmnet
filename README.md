@@ -32,7 +32,7 @@ The response has exactly four fields:
 | Docker, k3d, and kubectl | Local Kubernetes cluster |
 | Ollama with `phi3.5` | Teacher labeling |
 | Locust | Optional load test |
-| GitHub CLI (`gh`) | Optional model Release download |
+| GitHub CLI (`gh`) | Model Release download during fresh deployment |
 
 On Windows, run the shell scripts through Git Bash. Install Python dependencies from the relevant `requirements.txt` files. The training script also needs a CPU or GPU installation of PyTorch.
 
@@ -93,7 +93,7 @@ make load           # requires a running service at localhost:8080
 make down           # deletes the local k3d cluster
 ```
 
-The deployment uses two service replicas, an Ingress, readiness and liveness probes, and a CPU-based HPA. See [the runbook](docs/RUNBOOK.md) for rollout, rollback, recovery, and measurement commands. The [report](report/report.md) explains the architecture and recorded results; `results/` contains the supporting outputs.
+The deployment uses two service replicas, an Ingress, readiness and liveness probes, and a CPU-based HPA. See [the runbook](docs/RUNBOOK.md) for rollout, rollback, recovery, and measurement commands. The [submission checklist](docs/SUBMISSION_CHECKLIST.md) tracks evidence that still needs verification. The [report](report/report.md) explains the architecture and recorded results; `results/` contains the supporting outputs.
 
 ## Cost estimate
 

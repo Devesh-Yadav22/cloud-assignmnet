@@ -6,7 +6,7 @@ This assignment permits AI assistance. The existing project draft names Claude /
 
 - The provided `score.py` reports 99% valid JSON and 43% full-frame accuracy for the saved v1 student predictions, and 48% full-frame accuracy for the saved teacher predictions.
 - The provided NACL simulator accepts all six sample packets; the subnet script prints the planned ranges.
-- The local source passes `pyflakes`, and all 22 unit tests pass. The remote CI result still needs verification.
+- The local source passes `pyflakes`, and all 22 unit tests pass. The deliberate base-model CI run passed lint, tests, and secret scanning, then failed at the quality gate as intended. The Release-based trained-model CI run is pending.
 - The report's numerical cluster claims were compared with files under `results/`. The rolling-update run has 2/39 non-200 responses (5.13%), which exceeds the assignment threshold; the HPA evidence does not show the full scale-up and scale-down cycle.
 
 ## Limits of verification

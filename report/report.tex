@@ -190,7 +190,9 @@ stateless); per-instance stateful security groups would be finer.
 \code{make up} builds + deploys from a fresh clone in $\leq$ 3 commands; \code{make down} deletes the
 cluster. Local lint and all 22 unit tests pass. The CI workflow includes lint, 22 unit tests, Release model evaluation, the
 \code{score.py --min-validity 95} gate, and secret scanning. Saved predictions score 99\% validity
-locally. A published Release, remote CI run, and failed base-model run link remain to verify this task.
+locally. The deliberately bad base-model run passed lint, tests, and secret scanning, then failed at
+the gate: \url{https://github.com/Devesh-Yadav22/cloud-assignmnet/actions/runs/42484822377}.
+A published Release and passing trained-model CI run remain to verify this task.
 \code{AI\_USE.md} records AI usage.\\
 \textbf{Limitations / improvements.} The supplied cluster evidence uses local k3d, not a true
 multi-node cluster, and test coverage isn't gated; a coverage threshold and a smoke deploy on every PR would

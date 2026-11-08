@@ -154,8 +154,10 @@ NACL is coarse (subnet-wide and stateless); per-instance, stateful security grou
 `make up` and `make down` are defined in the Makefile. Local lint and all **22 unit tests pass**.
 The CI workflow runs lint, 22 unit tests,
 downloads the `model-v1` Release asset for evaluation, applies the 95% validity gate, and scans for
-secrets. The saved predictions score **99% validity** locally. A remote CI run, a deliberately failed
-base-model run link, and a published model Release are still required to verify this task fully.
+secrets. The saved predictions score **99% validity** locally. The
+[deliberately failed base-model run](https://github.com/Devesh-Yadav22/cloud-assignmnet/actions/runs/42484822377)
+passed lint, tests, and secret scanning, then failed at the quality gate as intended. A published
+model Release and passing trained-model CI run are still required to verify this task fully.
 `AI_USE.md` records AI usage.
 **Limitations / improvements.** The supplied cluster evidence uses local k3d, not a true
 multi-node cluster, and test coverage isn't gated. Adding a
