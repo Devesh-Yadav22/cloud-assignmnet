@@ -3,10 +3,11 @@
 **Student:** Devesh | **Roll:** 230101052  
 **Repository:** https://github.com/Devesh-Yadav22/cloud-assignmnet
 
-> **Evidence note:** Numeric results below come from the supplied files in `results/`.
-> This checkout does not include the original model files, teacher shards, or cluster run history,
-> so those runs cannot be reproduced from the supplied files alone. Text under *Assumption*
-> identifies an estimate rather than a measurement.
+> **Evidence note:** Numeric results below come from the saved files in `results/`. The two
+> teacher-shard files are present in the local, Git-ignored `datasets/teacher/` directory, but are
+> intentionally excluded from the source submission. Model archives and a GitHub Release are not
+> present in this checkout, so model training and fresh deployment cannot be reproduced from this
+> package alone. Text under *Assumption* identifies an estimate rather than a measurement.
 
 ## 0. Architecture overview
 The system has four planes on one k3d (k3s-in-Docker) node: **storage** (SeaweedFS, S3 API, namespace

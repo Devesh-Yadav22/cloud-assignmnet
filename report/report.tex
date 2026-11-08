@@ -30,9 +30,10 @@
 \end{center}
 
 \noindent\colorbox{gray!12}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\small
-\textbf{Evidence note:} Numeric results come from supplied \code{results/} files. The original model
-files, teacher shards, and cluster run history are not in this checkout, so those runs cannot be
-reproduced from these files alone. \textit{Assumption} marks an estimate.}}
+\textbf{Evidence note:} Numeric results come from saved \code{results/} files. Two teacher-shard
+files are present in the local, Git-ignored \code{datasets/teacher/} directory and are excluded from
+the source submission. Model archives and a GitHub Release are absent, so model training and fresh
+deployment cannot be reproduced from this package alone. \textit{Assumption} marks an estimate.}}
 
 \section{Architecture overview}
 The system has four planes on one k3d (k3s-in-Docker) node: \textbf{storage} (SeaweedFS, S3 API, namespace
