@@ -1,17 +1,7 @@
 """Clean the teacher shards into a single training file (Task 1, step 6).
 
-Reads every datasets/teacher/shard-*.jsonl, removes the bad records listed in the handout,
-and writes the survivors in id order to datasets/v1/train.jsonl, together with its SHA-256
-checksum in datasets/v1/train.sha256. Prints the counts table required by the report.
-
-Removal reasons (each removed record is counted under exactly one reason, applied in order):
-  (a) reply is not a valid JSON object
-  (b) keys are not exactly intent, date, time, place
-  (c) intent is not one of the eight allowed intents
-  (d) a slot value is neither null nor text that appears in the command
-  (e) duplicate command text (keep the record with the smallest id)
-
-  input = (a) + (b) + (c) + (d) + duplicates + kept
+Reads every datasets/teacher/shard-*.jsonl, removes invalid records in the order
+specified by the assignment, and writes surviving records in ID order.
 """
 import argparse
 import hashlib
@@ -47,55 +37,50 @@ def classify(rec):
         return "a"
     if set(obj.keys()) != KEYS:
         return "b"
-    if obj.get("intent") not in INTENTS:
+    if not isinstance(obj.get("intent"), str) or obj["intent"] not in INTENTS:
         return "c"
     text = norm(rec.get("text", ""))
-    for k in ("date", "time", "place"):
-        v = obj[k]
-        if v is None:
-            continue
-        if not isinstance(v, str) or norm(v) not in text:
+    for key in ("date", "time", "place"):
+        value = obj[key]
+        if value is not None and (not isinstance(value, str) or norm(value) not in text):
             return "d"
-    return ("keep", obj)
+    return "keep", obj
 
 
 def clean_records(records):
-    """records: iterable of {"id","text","teacher_raw"}. Returns (kept, counts)."""
+    """records: iterable of {"id", "text", "teacher_raw"}; return (rows, counts)."""
     counts = {"input": 0, "a": 0, "b": 0, "c": 0, "d": 0, "duplicates": 0, "kept": 0}
-    survivors = []  # (id, text, obj) that passed a-d
+    survivors = []
     for rec in records:
         counts["input"] += 1
         result = classify(rec)
-        if result == "keep" or (isinstance(result, tuple) and result[0] == "keep"):
-            survivors.append((rec["id"], rec["text"], result[1]))
+        if isinstance(result, tuple) and result[0] == "keep":
+            text = rec.get("text", "")
+            survivors.append((rec["id"], text, result[1], norm(text)))
         else:
             counts[result] += 1
 
-    # (e) de-duplicate by command text, keeping the smallest id
-    best = {}  # text -> (id, text, obj)
-    for sid, text, obj in survivors:
-        if text not in best or sid < best[text][0]:
-            best[text] = (sid, text, obj)
+    # Commands differing only in case or whitespace are duplicates too.
+    best = {}
+    for sid, text, obj, normalized_text in survivors:
+        if normalized_text not in best or sid < best[normalized_text][0]:
+            best[normalized_text] = (sid, text, obj)
     counts["duplicates"] = len(survivors) - len(best)
 
-    kept = sorted(best.values(), key=lambda t: t[0])  # id order
+    kept = sorted(best.values(), key=lambda item: item[0])
     counts["kept"] = len(kept)
-    rows = [{"id": sid, "text": text,
-             "intent": obj["intent"], "date": obj["date"],
-             "time": obj["time"], "place": obj["place"]}
-            for sid, text, obj in kept]
+    rows = [{"id": sid, "text": text, "intent": obj["intent"], "date": obj["date"],
+             "time": obj["time"], "place": obj["place"]} for sid, text, obj in kept]
     return rows, counts
 
 
 def read_all_shards(bucket, prefix):
     records = []
     for key in storage.list_keys(bucket, prefix):
-        if not key.endswith(".jsonl"):
-            continue
-        text = storage.read_text(bucket, key)
-        for line in text.splitlines():
-            if line.strip():
-                records.append(json.loads(line))
+        if key.endswith(".jsonl"):
+            for line in storage.read_text(bucket, key).splitlines():
+                if line.strip():
+                    records.append(json.loads(line))
     return records
 
 
@@ -108,7 +93,7 @@ def print_counts(counts):
     print(f"  (d) invented slot      {counts['d']}")
     print(f"  duplicates removed     {counts['duplicates']}")
     print(f"  kept                   {counts['kept']}")
-    total = counts['a'] + counts['b'] + counts['c'] + counts['d'] + counts['duplicates'] + counts['kept']
+    total = sum(counts[key] for key in ("a", "b", "c", "d", "duplicates", "kept"))
     print(f"  check a+b+c+d+dup+kept  {total} (== input: {total == counts['input']})")
 
 
@@ -116,25 +101,21 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bucket", default=os.environ.get("DATASETS_BUCKET", "datasets"))
     ap.add_argument("--prefix", default="teacher/shard-")
-    ap.add_argument("--out-prefix", default="v1", help="object prefix for train.jsonl / train.sha256")
-    ap.add_argument("--counts-out", help="also write the counts table as JSON here")
-    a = ap.parse_args()
+    ap.add_argument("--out-prefix", default="v1")
+    ap.add_argument("--counts-out")
+    args = ap.parse_args()
 
-    records = read_all_shards(a.bucket, a.prefix)
-    rows, counts = clean_records(records)
-
-    body = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+    rows, counts = clean_records(read_all_shards(args.bucket, args.prefix))
+    body = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
-
-    storage.ensure_bucket(a.bucket)
-    storage.write_text(a.bucket, f"{a.out_prefix}/train.jsonl", body)
-    storage.write_text(a.bucket, f"{a.out_prefix}/train.sha256", f"{digest}  train.jsonl\n")
-
+    storage.ensure_bucket(args.bucket)
+    storage.write_text(args.bucket, f"{args.out_prefix}/train.jsonl", body)
+    storage.write_text(args.bucket, f"{args.out_prefix}/train.sha256", f"{digest}  train.jsonl\n")
     print_counts(counts)
-    print(f"\nwrote {a.bucket}/{a.out_prefix}/train.jsonl  ({len(rows)} records)")
+    print(f"\nwrote {args.bucket}/{args.out_prefix}/train.jsonl  ({len(rows)} records)")
     print(f"sha256 {digest}")
-    if a.counts_out:
-        with open(a.counts_out, "w", encoding="utf-8") as f:
+    if args.counts_out:
+        with open(args.counts_out, "w", encoding="utf-8") as f:
             json.dump(counts, f, indent=2)
 
 
