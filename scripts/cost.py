@@ -1,46 +1,142 @@
-"""Cost-per-1000-requests estimator for Task 7, using data/rate_card.json.
+"""Clean the teacher shards into a single training file (Task 1, step 6).
 
-  cost_per_1000 = (hourly cost of all running replicas / requests served per hour) * 1000
-  hourly cost of a replica = cpu_limit * vcpu_hour + mem_limit_gib * gib_memory_hour
+Reads every datasets/teacher/shard-*.jsonl, removes the bad records listed in the handout,
+and writes the survivors in id order to datasets/v1/train.jsonl, together with its SHA-256
+checksum in datasets/v1/train.sha256. Prints the counts table required by the report.
 
-Example:
-  python scripts/cost.py --replicas 2 --cpu-limit 1 --mem-gib 1 --rps 8
+Removal reasons (each removed record is counted under exactly one reason, applied in order):
+  (a) reply is not a valid JSON object
+  (b) keys are not exactly intent, date, time, place
+  (c) intent is not one of the eight allowed intents
+  (d) a slot value is neither null nor text that appears in the command
+  (e) duplicate command text (keep the record with the smallest id)
+
+  input = (a) + (b) + (c) + (d) + duplicates + kept
 """
 import argparse
+import hashlib
 import json
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import storage  # noqa: E402
+
+KEYS = {"intent", "date", "time", "place"}
+INTENTS = {
+    "alarm_set", "alarm_query", "calendar_set", "calendar_query",
+    "calendar_remove", "weather_query", "datetime_query", "recommendation_events",
+}
 
 
-def estimate(replicas, cpu_limit, mem_gib, rps, card):
-    per_replica_hour = cpu_limit * card["vcpu_hour"] + mem_gib * card["gib_memory_hour"]
-    hourly = replicas * per_replica_hour
-    requests_per_hour = rps * 3600.0
-    cost_per_1000 = hourly / requests_per_hour * 1000.0
-    return {
-        "per_replica_hour": round(per_replica_hour, 4),
-        "hourly_all_replicas": round(hourly, 4),
-        "requests_per_hour": round(requests_per_hour, 2),
-        "cost_per_1000_requests": round(cost_per_1000, 4),
-        "currency": card.get("currency", ""),
-    }
+def norm(s):
+    return " ".join(str(s).strip().lower().split())
+
+
+def classify(rec):
+    """Return ('keep', obj) or a one-letter rejection reason 'a'/'b'/'c'/'d'."""
+    raw = rec.get("teacher_raw")
+    if isinstance(raw, dict):
+        obj = raw
+    else:
+        try:
+            obj = json.loads(str(raw).strip())
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return "a"
+    if not isinstance(obj, dict):
+        return "a"
+    if set(obj.keys()) != KEYS:
+        return "b"
+    if not isinstance(obj.get("intent"), str) or obj.get("intent") not in INTENTS:
+        return "c"
+    text = norm(rec.get("text", ""))
+    for k in ("date", "time", "place"):
+        v = obj[k]
+        if v is None:
+            continue
+        if not isinstance(v, str) or norm(v) not in text:
+            return "d"
+    return ("keep", obj)
+
+
+def clean_records(records):
+    """records: iterable of {"id","text","teacher_raw"}. Returns (kept, counts)."""
+    counts = {"input": 0, "a": 0, "b": 0, "c": 0, "d": 0, "duplicates": 0, "kept": 0}
+    survivors = []  # (id, text, obj, norm_text) that passed a-d
+    for rec in records:
+        counts["input"] += 1
+        result = classify(rec)
+        if result == "keep" or (isinstance(result, tuple) and result[0] == "keep"):
+            text = rec.get("text", "")
+            survivors.append((rec["id"], text, result[1], norm(text)))
+        else:
+            counts[result] += 1
+
+    # (e) de-duplicate by canonicalized command text, keeping the smallest id
+    best = {}  # norm_text -> (id, text, obj)
+    for sid, text, obj, norm_text in survivors:
+        if norm_text not in best or sid < best[norm_text][0]:
+            best[norm_text] = (sid, text, obj)
+    counts["duplicates"] = len(survivors) - len(best)
+
+    kept = sorted(best.values(), key=lambda t: t[0])  # id order
+    counts["kept"] = len(kept)
+    rows = [{"id": sid, "text": text,
+             "intent": obj["intent"], "date": obj["date"],
+             "time": obj["time"], "place": obj["place"]}
+            for sid, text, obj in kept]
+    return rows, counts
+
+
+def read_all_shards(bucket, prefix):
+    records = []
+    for key in storage.list_keys(bucket, prefix):
+        if not key.endswith(".jsonl"):
+            continue
+        text = storage.read_text(bucket, key)
+        for line in text.splitlines():
+            if line.strip():
+                records.append(json.loads(line))
+    return records
+
+
+def print_counts(counts):
+    print("Cleaning counts")
+    print(f"  input records          {counts['input']}")
+    print(f"  (a) invalid JSON       {counts['a']}")
+    print(f"  (b) wrong keys         {counts['b']}")
+    print(f"  (c) bad intent         {counts['c']}")
+    print(f"  (d) invented slot      {counts['d']}")
+    print(f"  duplicates removed     {counts['duplicates']}")
+    print(f"  kept                   {counts['kept']}")
+    total = counts['a'] + counts['b'] + counts['c'] + counts['d'] + counts['duplicates'] + counts['kept']
+    print(f"  check a+b+c+d+dup+kept  {total} (== input: {total == counts['input']})")
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--replicas", type=int, required=True)
-    ap.add_argument("--cpu-limit", type=float, required=True, help="vCPU limit per replica")
-    ap.add_argument("--mem-gib", type=float, required=True, help="memory limit (GiB) per replica")
-    ap.add_argument("--rps", type=float, required=True, help="requests per second (from the load test)")
-    ap.add_argument("--rate-card", default=os.path.join("data", "rate_card.json"))
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--bucket", default=os.environ.get("DATASETS_BUCKET", "datasets"))
+    ap.add_argument("--prefix", default="teacher/shard-")
+    ap.add_argument("--out-prefix", default="v1", help="object prefix for train.jsonl / train.sha256")
+    ap.add_argument("--counts-out", help="also write the counts table as JSON here")
     a = ap.parse_args()
-    with open(a.rate_card, encoding="utf-8") as f:
-        card = json.load(f)
-    r = estimate(a.replicas, a.cpu_limit, a.mem_gib, a.rps, card)
-    print(f"per replica/hour      {r['per_replica_hour']} {r['currency']}  "
-          f"(= {a.cpu_limit}*{card['vcpu_hour']} + {a.mem_gib}*{card['gib_memory_hour']})")
-    print(f"all {a.replicas} replicas/hour   {r['hourly_all_replicas']} {r['currency']}")
-    print(f"requests/hour         {r['requests_per_hour']}  (= {a.rps} rps * 3600)")
-    print(f"cost per 1000 reqs     {r['cost_per_1000_requests']} {r['currency']}")
+
+    records = read_all_shards(a.bucket, a.prefix)
+    rows, counts = clean_records(records)
+
+    body = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    storage.ensure_bucket(a.bucket)
+    storage.write_text(a.bucket, f"{a.out_prefix}/train.jsonl", body)
+    storage.write_text(a.bucket, f"{a.out_prefix}/train.sha256", f"{digest}  train.jsonl\n")
+
+    print_counts(counts)
+    print(f"\nwrote {a.bucket}/{a.out_prefix}/train.jsonl  ({len(rows)} records)")
+    print(f"sha256 {digest}")
+    if a.counts_out:
+        with open(a.counts_out, "w", encoding="utf-8") as f:
+            json.dump(counts, f, indent=2)
 
 
 if __name__ == "__main__":
