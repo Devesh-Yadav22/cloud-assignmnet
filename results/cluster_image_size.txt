@@ -1,2 +1,6 @@
-service image: 1.74GB  (374738955 bytes = 0.37 GB)
-under 2 GB limit: True
+Build: docker build -f service/Dockerfile -t cloud-mini/service:v1 .
+Result: successful on the local Docker Desktop Linux engine.
+Measured with: docker image inspect cloud-mini/service:v1 --format '{{.Size}}'
+Size: 1,741,654,151 bytes = 1.74 GB = 1.62 GiB (below 2 GB).
+Image /app files: app.py, model_runner.py, requirements.txt, schema.json.
+No model weights are copied into the image.
