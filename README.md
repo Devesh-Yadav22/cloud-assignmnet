@@ -32,7 +32,7 @@ The response has exactly four fields:
 | Docker, k3d, and kubectl | Local Kubernetes cluster |
 | Ollama with `phi3.5` | Teacher labeling |
 | Locust | Optional load test |
-| GitHub CLI (`gh`) | Model Release download during fresh deployment |
+| GitHub CLI (`gh`) or `curl` | Model Release download during fresh deployment |
 
 On Windows, run the shell scripts through Git Bash. Install Python dependencies from the relevant `requirements.txt` files. For lint and unit tests, use `pip install -r tests/requirements.txt`. The training script needs the CPU build of PyTorch described in `training/requirements.txt`.
 
