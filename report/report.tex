@@ -132,8 +132,8 @@ pinned image, weights excluded.\\
 validation commands returned schema-valid 200 objects, an invalid output $\rightarrow$ the 500 path, and the
 service ran live under \code{uvicorn} with \code{/healthz},\,\code{/readyz} $\rightarrow$ 200 and
 \code{/parse} $\rightarrow$ 200 with correct headers (\code{results/service\_endpoints.txt}). The image
-built on a Linux runner is \textbf{1.74\,GB} ($<$ 2\,GB; \code{docker images},
-\code{results/cluster\_image\_size.txt}) and answered \code{/parse} through the Ingress with the right
+built locally with Docker Desktop is \textbf{1.74\,GB} ($<$ 2\,GB; \code{docker image inspect},
+\code{results/cluster\_image\_size.txt}); saved cluster output shows \code{/parse} through the Ingress with the right
 headers. Under the \S7 load each replica peaked at $\sim$\textbf{460\,MiB} at its 1\,GiB limit --- no OOM.
 The separate 50 sequential requests under CPU and memory limits have no saved evidence.\\
 \textbf{Limitations / improvements.} Single uvicorn worker per replica; request batching would raise

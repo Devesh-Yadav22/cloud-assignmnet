@@ -99,8 +99,8 @@ weights excluded.
 The service also ran live under `uvicorn` with the model loaded from disk: `GET /healthz` and
 `GET /readyz` → **200**, and `POST /parse` → **200** with headers `X-Model-Version: v1` / `X-Served-By`
 (e.g. *weather in london* → `{"intent":"weather_query","date":null,"time":null,"place":"london"}`;
-`results/service_endpoints.txt`). The image built on a Linux runner is **1.74 GB** (< 2 GB;
-`docker images`, `results/cluster_image_size.txt`), and in the cluster it answered `/parse` through the
+`results/service_endpoints.txt`). The image built locally with Docker Desktop is **1.74 GB** (< 2 GB;
+`docker image inspect`, `results/cluster_image_size.txt`), and the saved cluster output shows `/parse` through the
 Ingress with the right headers (`results/cluster_ingress_parse.txt`). Under the §7 load each replica
 peaked at ~**460 MiB** at its 1 GiB limit (`results/cluster_top_pods.txt`) — no OOM.
 The separate 50 sequential requests under `--cpus 1 --memory 1g` were not saved and still need evidence.
