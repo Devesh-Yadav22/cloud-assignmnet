@@ -100,9 +100,13 @@ def main():
     storage.ensure_bucket(DATASETS_BUCKET)
     local_path = os.path.join("datasets", "teacher", f"shard-{idx}.jsonl")
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    key = f"teacher/shard-{idx}.jsonl"
+    if storage.use_s3() and key in storage.list_keys(DATASETS_BUCKET, key):
+        # A restarted Job pod has an empty local disk; resume from its uploaded shard.
+        with open(local_path, "w", encoding="utf-8") as cached:
+            cached.write(storage.read_text(DATASETS_BUCKET, key))
     done = already_done(local_path)
 
-    key = f"teacher/shard-{idx}.jsonl"
     print(f"[shard {idx}/{count}] {len(mine)} commands, {len(done)} already done", flush=True)
 
     with open(local_path, "a", encoding="utf-8") as out:

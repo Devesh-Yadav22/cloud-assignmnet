@@ -54,7 +54,14 @@ def ensure_bucket(bucket):
     c = _s3_client()
     existing = {b["Name"] for b in c.list_buckets().get("Buckets", [])}
     if bucket not in existing:
-        c.create_bucket(Bucket=bucket)
+        from botocore.exceptions import ClientError
+
+        try:
+            c.create_bucket(Bucket=bucket)
+        except ClientError as exc:
+            # Some SeaweedFS configurations omit existing buckets from ListBuckets.
+            if exc.response.get("Error", {}).get("Code") != "BucketAlreadyOwnedByYou":
+                raise
 
 
 def write_text(bucket, path, text):

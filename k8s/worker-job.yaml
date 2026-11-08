@@ -27,8 +27,8 @@ spec:
             - {name: SHARD_COUNT, value: "2"}
             - {name: TEACHER_MODEL, value: "phi3.5"}
             - {name: DATASETS_BUCKET, value: "datasets"}
-            # Ollama running on the laptop is reachable from the cluster at host.k3d.internal.
-            - {name: OLLAMA_HOST, value: "http://host.k3d.internal:11434"}
+            # Docker Desktop exposes the host Ollama service through this DNS name.
+            - {name: OLLAMA_HOST, value: "http://host.docker.internal:11434"}
             - {name: S3_ENDPOINT, value: "http://seaweedfs.data.svc.cluster.local:8333"}
             - name: AWS_ACCESS_KEY_ID
               valueFrom: {secretKeyRef: {name: s3-credentials, key: AWS_ACCESS_KEY_ID}}
